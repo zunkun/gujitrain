@@ -203,3 +203,5 @@ weights/*_old_backup.pt
 .vscode/
 .workbuddy/
 .workbuddy-ai/
+
+data/*.zip

@@ -2,10 +2,10 @@
 
 古籍 OCR 前处理项目：一个工程内包含两个相互隔离的 YOLOv8 检测任务，**数据、标注、权重、训练产物完全隔离，互不融合**，只共用一套训练/推理代码。
 
-| 任务 | 数据 / 权重 | 类别 | 用途 |
-|---|---|---|---|
-| bookcontent | `data/bookcontent/` → `weights/bookcontent.pt` | 1 类 `bookcontent` | 文本主体区域检测（左右页切图） |
-| gujiline | `data/gujiline/` → `weights/gujiline.pt` | 2 类 `gujiline`、`small` | 栏线 / 小字检测 |
+| 任务        | 数据 / 权重                                    | 类别                     | 用途                           |
+| ----------- | ---------------------------------------------- | ------------------------ | ------------------------------ |
+| bookcontent | `data/bookcontent/` → `weights/bookcontent.pt` | 1 类 `bookcontent`       | 文本主体区域检测（左右页切图） |
+| gujiline    | `data/gujiline/` → `weights/gujiline.pt`       | 2 类 `gujiline`、`small` | 栏线 / 小字检测                |
 
 数据来源：bookcontent 为《容齋隨筆》（Harvard drs 54114467，makesense.ai 标注）；gujiline 为原 gujilinetrain 项目迁移（82 图 / 820 框）。
 
@@ -31,6 +31,15 @@ gujitrain/
 ├─ train_common.py              # 公共训练逻辑
 └─ requirements.txt
 ```
+
+## DATA 数据
+
+1. 百度网盘
+
+通过网盘分享的文件：古籍训练数据
+链接: https://pan.baidu.com/s/1UMAb6CbRwkgnwjNCNjXAkQ?pwd=2gm8 提取码: 2gm8
+
+2. 阿里云盘
 
 ## 快速开始
 
@@ -74,18 +83,18 @@ names: ["bookcontent"]
 - **中断安全**：训练期间只写 `runs/<任务>/trainN/weights/`；结束后才以「临时文件 + 原子替换」更新 `weights/<任务>.pt`，中途断掉不会写坏最终权重
 - **产物隔离**：各任务产物只进各自的 `runs/<任务>/`
 
-| 参数 | bookcontent | gujiline |
-|---|---|---|
-| epochs / batch / patience | 50 / 4 / 10 | 200 / 8 / 30 |
-| lr0 | 0.0003 | 0.001 |
-| imgsz / optimizer | 640 / AdamW（lrf=0.01，两者相同） | 同左 |
-| 增强 | mosaic=0, augment=False | mosaic/mixup/copy_paste=0, hsv/scale 微调 |
-| 设备 | GPU 自动判断（无 GPU 回退 CPU） | 同左 |
+| 参数                      | bookcontent                       | gujiline                                  |
+| ------------------------- | --------------------------------- | ----------------------------------------- |
+| epochs / batch / patience | 50 / 4 / 10                       | 200 / 8 / 30                              |
+| lr0                       | 0.0003                            | 0.001                                     |
+| imgsz / optimizer         | 640 / AdamW（lrf=0.01，两者相同） | 同左                                      |
+| 增强                      | mosaic=0, augment=False           | mosaic/mixup/copy_paste=0, hsv/scale 微调 |
+| 设备                      | GPU 自动判断（无 GPU 回退 CPU）   | 同左                                      |
 
 公共参数（amp=False、workers、weight_decay、warmup、cache=disk 等）在 `train_common.py` 统一维护。
 
 ## 其他说明
 
 - 切图脚本：输入 `images/<书名>/img0/`，输出 `output/<书名>/`；单双页按平均宽度 ×0.8 自动判断，左右页按检测框中心分组
-- gujiline 检测报告脚本（detector*.py / test.py）加载 `weights/gujiline.pt`，目标类别 `TARGET_CLASS = "gujiline"`
-- git 约定：训练集图片/标注、runs/、*.pt 均不入库（见 .gitignore），只跟踪代码与 yaml 配置
+- gujiline 检测报告脚本（detector\*.py / test.py）加载 `weights/gujiline.pt`，目标类别 `TARGET_CLASS = "gujiline"`
+- git 约定：训练集图片/标注、runs/、\*.pt 均不入库（见 .gitignore），只跟踪代码与 yaml 配置
