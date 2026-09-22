@@ -81,29 +81,45 @@ def run_training(cfg):
     data_path = cfg["data"] if os.path.isabs(cfg["data"]) else os.path.join(ROOT, cfg["data"])
     project_path = cfg["project"] if os.path.isabs(cfg["project"]) else os.path.join(ROOT, cfg["project"])
 
-    results = model.train(
-        data=data_path,
-        epochs=cfg["epochs"],
-        imgsz=IMGSZ,
-        batch=batch,
-        device=device,
-        workers=workers,
-        amp=AMP,
-        patience=cfg["patience"],
-        project=project_path,     # 训练产物按任务隔离（绝对路径，防止嵌套到 runs/detect 下）
-        plots=False,
-        verbose=False,
-        save_json=False,
-        save_txt=False,
-        show_labels=False,
-        show_conf=False,
-        show_boxes=False,
-        cache="disk",             # 磁盘缓存预处理图片，提升 IO 效率
-        optimizer="AdamW",
-        lr0=cfg["lr0"],
-        lrf=0.01,
-        **cfg["train_kwargs"],
-    )
+    try:
+        results = model.train(
+            data=data_path,
+            epochs=cfg["epochs"],
+            imgsz=IMGSZ,
+            batch=batch,
+            device=device,
+            workers=workers,
+            amp=AMP,
+            patience=cfg["patience"],
+            project=project_path,     # 训练产物按任务隔离（绝对路径，防止嵌套到 runs/detect 下）
+            plots=False,
+            verbose=False,
+            save_json=False,
+            save_txt=False,
+            show_labels=False,
+            show_conf=False,
+            show_boxes=False,
+            cache="disk",             # 磁盘缓存预处理图片，提升 IO 效率
+            optimizer="AdamW",
+            lr0=cfg["lr0"],
+            lrf=0.01,
+            **cfg["train_kwargs"],
+        )
+    except KeyboardInterrupt:
+        # Ctrl+C 优雅中断：进度已在 last.pt，不复制 best、不更新最终权重
+        print("\n" + "=" * 60)
+        print("⚠️  已收到 Ctrl+C，训练中断")
+        trainer = getattr(model, "trainer", None)
+        save_dir = getattr(trainer, "save_dir", None)
+        if save_dir:
+            last_pt = os.path.join(str(save_dir), "weights", "last.pt")
+            if os.path.exists(last_pt):
+                print(f"💾 断点进度已保存: {last_pt}")
+                print("✅ 精确续训（从断点的 epoch 继续）请执行:")
+                print(f'   yolo resume model="{last_pt}"')
+        print("ℹ️  weights/ 下的已有权重不受影响；直接重跑训练脚本则从现有权重增量续训")
+        print("=" * 60)
+        raise SystemExit(130)
 
     # 训练结束复制最新 best.pt 覆盖目标权重
     best_src = os.path.join(results.save_dir, "weights", "best.pt")

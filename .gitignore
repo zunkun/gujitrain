@@ -195,7 +195,9 @@ output/
 yoloout/
 
 # 模型权重（可由训练重新生成）
-*.pt
+*runs/*.pt
+
+weights/*_old_backup.pt
 
 # 编辑器与本地工具目录
 .vscode/

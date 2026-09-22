@@ -6,15 +6,16 @@ bookcontent 任务训练入口（文本区域检测，1 类：bookcontent）。
     python train_bookcontent.py           # 自动：有权重就续训，没有就从 yolov8n.pt 训练
     python train_bookcontent.py --fresh   # 强制忽略已有权重，从头重新训练
 """
+
 from train_common import parse_common_args, run_training
 
 TASK = dict(
     task_name="bookcontent",
-    data="data/bookcontent/bookcontent.yaml",   # nc=1, names=["bookcontent"]
+    data="data/bookcontent/bookcontent.yaml",  # nc=1, names=["bookcontent"]
     final_weights="weights/bookcontent.pt",
     backup_weights="weights/bookcontent_old_backup.pt",
-    project="runs/bookcontent",                 # 训练产物输出目录
-    epochs=50,
+    project="runs/bookcontent",  # 训练产物输出目录
+    epochs=100,
     batch=4,
     patience=10,
     lr0=0.0003,
