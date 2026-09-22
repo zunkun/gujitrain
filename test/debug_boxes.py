@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-调试版切图：输出所有检测框不筛选（由原根目录 predict2.py 迁入并参数化）。
+调试版切图：输出所有检测框不筛选（双任务可用 --task 选择模型）。
 
 用法:
-    python test/predict2.py bookcontent
-    python test/predict2.py line --books book2
+    python test/debug_boxes.py bookcontent
+    python test/debug_boxes.py gujiline --books book2
 """
 import argparse
 import os

@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-统一切图入口（由原根目录 predict.py 迁入并参数化）。
+bookcontent 批量切图：用 weights/bookcontent.pt 检测文本区域，左右页自动切分。
 
 用法:
-    python test/predict.py bookcontent                # 用 bookcontent.pt 切图
-    python test/predict.py line                       # 用 gujiline.pt 切图
-    python test/predict.py bookcontent --books book1 book2
+    python test/predict_bookcontent.py
+    python test/predict_bookcontent.py --books book1 book2
 """
 import argparse
 import os
 import shutil
-import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import cv2
@@ -21,11 +19,9 @@ from ultralytics import YOLO
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
 
-# ===================== 【任务 -> 模型映射】 =====================
-TASK_WEIGHTS = {
-    "bookcontent": "weights/bookcontent.pt",
-    "gujiline": "weights/gujiline.pt",
-}
+# ===================== 【本脚本固定使用 bookcontent 模型】 =====================
+MODEL_PATH = "weights/bookcontent.pt"
+TARGET_TASK = "bookcontent"
 
 # ===================== 【可配置区域 - 按你的方案设置】 =====================
 # 需要处理的书籍列表，顺序执行（一本处理完再下一本）；可用 --books 覆盖
@@ -58,19 +54,17 @@ BASE_OUTPUT = "./output"
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="古籍文本区域批量切图")
-    parser.add_argument("task", choices=list(TASK_WEIGHTS.keys()), help="使用哪个模型")
+    parser = argparse.ArgumentParser(description="bookcontent 批量切图（文本区域检测）")
     parser.add_argument("--books", nargs="*", default=None, help="覆盖待处理书籍列表")
     args = parser.parse_args()
     return args
 
 
 args = parse_args()
-MODEL_PATH = TASK_WEIGHTS[args.task]
 
 # 全局仅加载一次模型，避免多线程重复打印日志
 print("=" * 60)
-print(f"📌 加载模型: {MODEL_PATH} (任务: {args.task})")
+print(f"📌 加载模型: {MODEL_PATH} (任务: {TARGET_TASK})")
 model = YOLO(MODEL_PATH)
 print("✅ 模型加载成功！")
 print("=" * 60)

@@ -197,9 +197,6 @@ yoloout/
 # 模型权重（可由训练重新生成）
 *.pt
 
-# 打包例外：PyInstaller 配置需要跟踪
-!cropyolo.spec
-
 # 编辑器与本地工具目录
 .vscode/
 .workbuddy/
