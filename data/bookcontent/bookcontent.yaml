@@ -2,5 +2,6 @@ path: D:/workspace/gujitrain/data/bookcontent
 train: images
 val: images
 
-nc: 1
-names: ["bookcontent"]
+# 类别编号 = 下面 names 列表的位置，顺序不可随意调整（0 是已训练过的 harfcontent）
+nc: 2
+names: ["harfcontent", "fullcontent"]

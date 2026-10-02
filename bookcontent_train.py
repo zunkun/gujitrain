@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-bookcontent 任务训练入口（文本区域检测，1 类：bookcontent）。
+bookcontent 任务训练入口（2 类：bookcontent=0 文字主体区域 / fullcontent=1 整页内容区域）。
 
 用法:
     python train_bookcontent.py           # 自动：有权重就续训，没有就从 yolov8n.pt 训练
@@ -11,13 +11,13 @@ from train_common import parse_common_args, run_training
 
 TASK = dict(
     task_name="bookcontent",
-    data="data/bookcontent/bookcontent.yaml",  # nc=1, names=["bookcontent"]
+    data="data/bookcontent/bookcontent.yaml",  # nc=2, names=["bookcontent", "fullcontent"]
     final_weights="weights/bookcontent.pt",
     backup_weights="weights/bookcontent_old_backup.pt",
     project="runs/bookcontent",  # 训练产物输出目录
     # ---- 从头训练配置（追求精度）----
-    epochs=200,
-    batch=8,
+    epochs=80,
+    batch=12,
     patience=30,  # 从头训练收敛慢，加大耐心防误停
     lr0=0.001,  # 从头训练用正常学习率（0.0003 是微调用的，太小学不动）
     init_weight="weights/yolov8n.pt",

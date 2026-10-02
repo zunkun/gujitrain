@@ -3,6 +3,7 @@
 训练公共逻辑：train_bookcontent.py / train_gujiline.py 共用。
 两个任务的数据、权重、训练产物完全隔离，互不融合。
 """
+
 import os
 import shutil
 
@@ -25,8 +26,11 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 
 def parse_common_args(task_name):
     parser = argparse.ArgumentParser(description=f"古籍 YOLO 训练入口：{task_name}")
-    parser.add_argument("--fresh", action="store_true",
-                        help="忽略已有权重，强制从 weights/yolov8n.pt 从头重新训练（默认自动续训）")
+    parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help="忽略已有权重，强制从 weights/yolov8n.pt 从头重新训练（默认自动续训）",
+    )
     return parser.parse_args()
 
 
@@ -46,9 +50,21 @@ def run_training(cfg):
 
     use_init = False
     # 路径统一锚定到项目根目录
-    final_w = cfg["final_weights"] if os.path.isabs(cfg["final_weights"]) else os.path.join(ROOT, cfg["final_weights"])
-    backup_w = cfg["backup_weights"] if os.path.isabs(cfg["backup_weights"]) else os.path.join(ROOT, cfg["backup_weights"])
-    init_w = cfg["init_weight"] if os.path.isabs(cfg["init_weight"]) else os.path.join(ROOT, cfg["init_weight"])
+    final_w = (
+        cfg["final_weights"]
+        if os.path.isabs(cfg["final_weights"])
+        else os.path.join(ROOT, cfg["final_weights"])
+    )
+    backup_w = (
+        cfg["backup_weights"]
+        if os.path.isabs(cfg["backup_weights"])
+        else os.path.join(ROOT, cfg["backup_weights"])
+    )
+    init_w = (
+        cfg["init_weight"]
+        if os.path.isabs(cfg["init_weight"])
+        else os.path.join(ROOT, cfg["init_weight"])
+    )
 
     # 自动判断：已有最终权重 -> 增量续训；没有 -> 从 yolov8n.pt 从头训练
     # 只有显式 --fresh 才忽略已有权重强制从头训练（旧权重仍会先备份）
@@ -56,7 +72,9 @@ def run_training(cfg):
         use_init = True
         print("🔄 --fresh 模式：忽略已有权重，从头重新训练")
     elif os.path.exists(final_w):
-        print(f"🔁 检测到已有权重 {cfg['final_weights']}，自动增量续训（从头重训请加 --fresh）")
+        print(
+            f"🔁 检测到已有权重 {cfg['final_weights']}，自动增量续训（从头重训请加 --fresh）"
+        )
     else:
         use_init = True
         print(f"🆕 未发现已有权重，从 {cfg['init_weight']} 开始训练")
@@ -78,8 +96,14 @@ def run_training(cfg):
     model = YOLO(load_weight)
 
     # data 与 project 转绝对路径，避免 ultralytics 8.4 相对路径解析歧义
-    data_path = cfg["data"] if os.path.isabs(cfg["data"]) else os.path.join(ROOT, cfg["data"])
-    project_path = cfg["project"] if os.path.isabs(cfg["project"]) else os.path.join(ROOT, cfg["project"])
+    data_path = (
+        cfg["data"] if os.path.isabs(cfg["data"]) else os.path.join(ROOT, cfg["data"])
+    )
+    project_path = (
+        cfg["project"]
+        if os.path.isabs(cfg["project"])
+        else os.path.join(ROOT, cfg["project"])
+    )
 
     try:
         results = model.train(
@@ -91,7 +115,7 @@ def run_training(cfg):
             workers=workers,
             amp=AMP,
             patience=cfg["patience"],
-            project=project_path,     # 训练产物按任务隔离（绝对路径，防止嵌套到 runs/detect 下）
+            project=project_path,  # 训练产物按任务隔离（绝对路径，防止嵌套到 runs/detect 下）
             plots=False,
             verbose=False,
             save_json=False,
@@ -99,7 +123,7 @@ def run_training(cfg):
             show_labels=False,
             show_conf=False,
             show_boxes=False,
-            cache="disk",             # 磁盘缓存预处理图片，提升 IO 效率
+            cache="disk",  # 磁盘缓存预处理图片，提升 IO 效率
             optimizer="AdamW",
             lr0=cfg["lr0"],
             lrf=0.01,

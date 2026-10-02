@@ -4,7 +4,7 @@
 
 | 任务        | 数据 / 权重                                    | 类别                     | 用途                           |
 | ----------- | ---------------------------------------------- | ------------------------ | ------------------------------ |
-| bookcontent | `data/bookcontent/` → `weights/bookcontent.pt` | 1 类 `bookcontent`       | 文本主体区域检测（左右页切图） |
+| bookcontent | `data/bookcontent/` → `weights/bookcontent.pt` | 2 类 `bookcontent`、`fullcontent` | 文本主体区域 / 整页内容区域检测（左右页切图） |
 | gujiline    | `data/gujiline/` → `weights/gujiline.pt`       | 2 类 `gujiline`、`small` | 栏线 / 小字检测                |
 
 数据来源：bookcontent 为《容齋隨筆》（Harvard drs 54114467，makesense.ai 标注）；gujiline 为原 gujilinetrain 项目迁移（82 图 / 820 框）。
@@ -24,7 +24,9 @@ gujitrain/
 ├─ test/
 │  ├─ predict_bookcontent.py    # bookcontent 批量切图（文本区域，左右页切分）
 │  ├─ predict_gujiline.py       # gujiline 批量切图（栏线/小字）
-│  ├─ debug_boxes.py            # 调试切图（--task 选模型，输出全部框）
+│  ├─ debug_boxes.py            # 调试检测（--task 选模型，输出全部框、按类配色）
+│  ├─ viz_labels.py             # 标注自检：把标签画回原图 + 数据集体检（不加载模型）
+│  ├─ convert_anylabeling.py    # X-AnyLabeling/LabelMe json → YOLO txt
 │  └─ detector*.py / test.py / report.py / utils.py   # gujiline 检测与报告
 ├─ train_bookcontent.py         # bookcontent 训练入口
 ├─ train_gujiline.py            # gujiline 训练入口
@@ -57,13 +59,23 @@ python train_bookcontent.py --fresh    # 强制从头重训（旧权重先自动
 python test/predict_bookcontent.py
 python test/predict_gujiline.py --books book1 book2
 
-# 调试模式（输出全部检测框，--task 选模型）
-python test/debug_boxes.py gujiline --books book2
+# 标注自检：把标签画回原图 + 数据集体检（不加载模型，不占 GPU，秒级）
+python test/viz_labels.py --task bookcontent --books b1 --limit 3
+python test/viz_labels.py --task bookcontent --no-image   # 只体检，不输出图
+
+# 调试检测（输出全部检测框、按类配色，--task 选模型）
+python test/debug_boxes.py --task bookcontent --books b1 --limit 3
+python test/debug_boxes.py gujiline --books book2          # 位置参数写法也可
+
+# 新标注：X-AnyLabeling 导出的 json → YOLO txt（类别顺序自动取自 yaml）
+python test/convert_anylabeling.py --src data/bookcontent/b1 --task bookcontent --dry-run
+python test/convert_anylabeling.py --src data/bookcontent/b1 --task bookcontent --copy-images
 ```
 
 ## 数据与标注
 
-- 类别：bookcontent 只框**文字主体区域**（不框边框/印章/批注/空白/污渍），双页左右各一框、单页一框；gujiline 标注**栏线**与**小字**两类
+- 类别：bookcontent 两类 —— `bookcontent`（编号 0）框**文字主体区域**（不框边框/印章/批注/空白/污渍），双页左右各一框、单页一框；`fullcontent`（编号 1）框**整页内容区域**，跨页只给一个大框。gujiline 标注**栏线**与**小字**两类
+- **txt 里不写类名**：每行 `类别编号 cx cy w h`，编号顺序由 yaml 的 `names` 决定（`names` 第 0 个 = 编号 0）。改类别顺序会让已有标注全部错位，禁止随意调整
 - 导出 **YOLO 格式 .txt**，标签与图片同名；文件名必须唯一（如 `book1_001.jpg`）
 - 图片平铺放入 `data/<任务>/images/`，标签放入 `labels/`
 - 每个任务一个独立 yaml，**path 必须写绝对路径**（ultralytics 8.4 对相对路径的解析受运行目录影响）：
@@ -73,8 +85,10 @@ python test/debug_boxes.py gujiline --books book2
 path: D:/workspace/gujitrain/data/bookcontent
 train: images
 val: images
-nc: 1
-names: ["bookcontent"]
+
+# 类别编号 = names 列表的位置，顺序不可随意调整
+nc: 2
+names: ["bookcontent", "fullcontent"]
 ```
 
 ## 训练说明

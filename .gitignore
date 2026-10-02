@@ -205,3 +205,5 @@ weights/*_old_backup.pt
 .workbuddy-ai/
 
 data/*.zip
+data/testimages/*
+.backup/
