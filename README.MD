@@ -18,7 +18,7 @@ gujitrain/
 │  └─ gujiline/                 # 训练集：images/ labels/ + gujiline.yaml (nc=2)
 ├─ weights/
 │  ├─ yolov8n.pt                # 预训练权重（训练起点）
-│  └─ <task>.pt / *_old_backup.pt   # 训练后生成；训练前旧权重自动备份（均不入 git）
+│  └─ <task>-v<版本>.pt / <task>.pt / *_backup.pt   # 训练后生成：版本化产物 + 稳定副本；训练前旧权重自动备份
 ├─ runs/
 │  ├─ bookcontent/  gujiline/   # 各任务训练产物（不入 git）
 ├─ test/

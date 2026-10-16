@@ -4,8 +4,11 @@
 两个任务的数据、权重、训练产物完全隔离，互不融合。
 """
 
+import glob
 import os
+import re
 import shutil
+from datetime import datetime
 
 # 全局设置 Ultralytics 日志级别，大幅减少刷屏输出
 os.environ["ULTRALYTICS_LOG_LEVEL"] = "WARNING"
@@ -22,6 +25,63 @@ AMP = False
 # 项目根目录：data/project 等相对路径一律锚定到这里，转成绝对路径传给 ultralytics
 # （ultralytics 8.4 对相对路径的解析受运行目录影响，绝对路径最稳）
 ROOT = os.path.dirname(os.path.abspath(__file__))
+
+
+def rel(path):
+    """把项目内绝对路径转成相对项目根的短路径，便于打印。"""
+    try:
+        return os.path.relpath(path, ROOT)
+    except ValueError:
+        return path
+
+
+def resolve_weight_paths(cfg):
+    """由配置推导版本化产物路径与稳定副本路径。
+
+    - final_weights: 版本化产物路径（如 weights/bookcontent-v101.pt）
+    - 稳定副本：去掉末尾的 -v<版本号>（如 weights/bookcontent.pt），供下游推理脚本加载
+    """
+    target_w = (
+        cfg["final_weights"]
+        if os.path.isabs(cfg["final_weights"])
+        else os.path.join(ROOT, cfg["final_weights"])
+    )
+    stem, ext = os.path.splitext(target_w)
+    suffix = f"-v{cfg['version_num']}"
+    stable_stem = stem[: -len(suffix)] if stem.endswith(suffix) else stem
+    return stable_stem + ext, target_w
+
+
+def find_old_weights(stable_w):
+    """查找该任务已有的旧权重。
+
+    只匹配稳定名 `<name>.pt` 与版本化名 `<name>-v<数字>.pt`（排除 *_backup.pt 等），
+    取版本号最大者；同版本取修改时间最新者。找不到返回 None。
+    """
+    stem, ext = os.path.splitext(stable_w)
+    name = os.path.basename(stem)
+    dir_path = os.path.dirname(stable_w)
+    pat = re.compile(rf"^{re.escape(name)}(?:-v(\d+))?{re.escape(ext)}$")
+    best = None  # ((版本号, 修改时间), 路径)
+    for p in glob.glob(os.path.join(dir_path, f"{name}*{ext}")):
+        m = pat.match(os.path.basename(p))
+        if not m:
+            continue
+        ver = int(m.group(1)) if m.group(1) else 0
+        key = (ver, os.path.getmtime(p))
+        if best is None or key > best[0]:
+            best = (key, p)
+    return best[1] if best else None
+
+
+def backup_old_weights(old_w):
+    """把旧权重复制为 `{old_name}_{ts}_backup.pt`（old_name 可能带版本号），返回备份路径。"""
+    stem, ext = os.path.splitext(old_w)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_w = f"{stem}_{ts}_backup{ext}"
+    os.makedirs(os.path.dirname(backup_w), exist_ok=True)
+    shutil.copy(old_w, backup_w)
+    return backup_w
 
 
 def parse_common_args(task_name):
@@ -50,47 +110,42 @@ def run_training(cfg):
 
     use_init = False
     # 路径统一锚定到项目根目录
-    final_w = (
-        cfg["final_weights"]
-        if os.path.isabs(cfg["final_weights"])
-        else os.path.join(ROOT, cfg["final_weights"])
-    )
-    backup_w = (
-        cfg["backup_weights"]
-        if os.path.isabs(cfg["backup_weights"])
-        else os.path.join(ROOT, cfg["backup_weights"])
-    )
     init_w = (
         cfg["init_weight"]
         if os.path.isabs(cfg["init_weight"])
         else os.path.join(ROOT, cfg["init_weight"])
     )
+    # 稳定副本（下游推理脚本固定加载）+ 带版本号的产物
+    stable_w, versioned_w = resolve_weight_paths(cfg)
 
-    # 自动判断：已有最终权重 -> 增量续训；没有 -> 从 yolov8n.pt 从头训练
+    # 查找该任务已有权重（兼容无版本号稳定名与带版本号 -v*.pt，取版本号最大者）
+    old_w = find_old_weights(stable_w)
+
+    # 自动判断：已有权重 -> 增量续训；没有 -> 从 yolov8n.pt 从头训练
     # 只有显式 --fresh 才忽略已有权重强制从头训练（旧权重仍会先备份）
     if cfg["fresh"]:
         use_init = True
         print("🔄 --fresh 模式：忽略已有权重，从头重新训练")
-    elif os.path.exists(final_w):
+    elif old_w:
         print(
-            f"🔁 检测到已有权重 {cfg['final_weights']}，自动增量续训（从头重训请加 --fresh）"
+            f"🔁 检测到已有权重 {rel(old_w)}，自动增量续训（从头重训请加 --fresh）"
         )
     else:
         use_init = True
         print(f"🆕 未发现已有权重，从 {cfg['init_weight']} 开始训练")
 
     # 训练前备份原有最优权重（无论续训还是 --fresh 重训，都先备份）
-    if os.path.exists(final_w):
-        os.makedirs(os.path.dirname(backup_w), exist_ok=True)
-        shutil.copy(final_w, backup_w)
-        print(f"📦 旧权重已备份至: {cfg['backup_weights']}")
+    # 备份名沿用旧权重自身文件名：{old_name}_{ts}_backup.pt（旧名可能带版本号）
+    if old_w:
+        backup_w = backup_old_weights(old_w)
+        print(f"📦 旧权重已备份至: {rel(backup_w)}")
 
     # 权重加载分支
     if use_init:
         load_weight = init_w
         print(f"🚀 加载预训练权重: {load_weight}")
     else:
-        load_weight = final_w
+        load_weight = old_w
         print(f"🔁 增量续训加载: {load_weight}")
 
     model = YOLO(load_weight)
@@ -145,14 +200,19 @@ def run_training(cfg):
         print("=" * 60)
         raise SystemExit(130)
 
-    # 训练结束复制最新 best.pt 覆盖目标权重
+    # 训练结束复制最新 best.pt：同时写入版本化产物与稳定副本
     best_src = os.path.join(results.save_dir, "weights", "best.pt")
     if os.path.exists(best_src):
-        os.makedirs(os.path.dirname(cfg["final_weights"]), exist_ok=True)
-        # 先写临时文件再原子替换，中断/断电也不会写坏目标权重
-        tmp_dst = cfg["final_weights"] + ".tmp"
-        shutil.copy(best_src, tmp_dst)
-        os.replace(tmp_dst, cfg["final_weights"])
-        print(f"\n✅ 权重更新完成：\n{best_src}\n→ {cfg['final_weights']}")
+        for dst in (versioned_w, stable_w):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            # 先写临时文件再原子替换，中断/断电也不会写坏目标权重
+            tmp_dst = dst + ".tmp"
+            shutil.copy(best_src, tmp_dst)
+            os.replace(tmp_dst, dst)
+        print(
+            f"\n✅ 权重更新完成：\n{best_src}"
+            f"\n→ {rel(versioned_w)}（版本产物）"
+            f"\n→ {rel(stable_w)}（稳定副本）"
+        )
     else:
         print("\n❌ 未找到本轮训练生成的best.pt")

@@ -9,11 +9,13 @@ bookcontent 任务训练入口（2 类：bookcontent=0 文字主体区域 / full
 
 from train_common import parse_common_args, run_training
 
+VERSION_NUM = "101"
+
 TASK = dict(
     task_name="bookcontent",
     data="data/bookcontent/bookcontent.yaml",  # nc=2, names=["bookcontent", "fullcontent"]
-    final_weights="weights/bookcontent.pt",
-    backup_weights="weights/bookcontent_old_backup.pt",
+    final_weights=f"weights/bookcontent-v{VERSION_NUM}.pt",  # 版本化产物
+    version_num=VERSION_NUM,  # 旧权重备份为 {旧名}_{ts}_backup.pt
     project="runs/bookcontent",  # 训练产物输出目录
     # ---- 从头训练配置（追求精度）----
     epochs=80,

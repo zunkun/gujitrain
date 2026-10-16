@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-gujiline 任务训练入口（栏线检测，2 类：gujiline / small），权重文件名为 gujiline.pt。
+gujiline 任务训练入口（栏线检测，2 类：gujiline / small）。
 
 用法:
     python train_gujiline.py           # 自动：有权重就续训，没有就从 yolov8n.pt 训练
@@ -8,11 +8,13 @@ gujiline 任务训练入口（栏线检测，2 类：gujiline / small），权�
 """
 from train_common import parse_common_args, run_training
 
+VERSION_NUM = "101"
+
 TASK = dict(
     task_name="gujiline",
     data="data/gujiline/gujiline.yaml",         # nc=2, names=["gujiline", "small"]
-    final_weights="weights/gujiline.pt",
-    backup_weights="weights/gujiline_old_backup.pt",
+    final_weights=f"weights/gujiline-v{VERSION_NUM}.pt",  # 版本化产物
+    version_num=VERSION_NUM,  # 旧权重备份为 {旧名}_{ts}_backup.pt
     project="runs/gujiline",
     epochs=200,
     batch=8,
