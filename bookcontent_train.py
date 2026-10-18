@@ -9,7 +9,7 @@ bookcontent 任务训练入口（2 类：bookcontent=0 文字主体区域 / full
 
 from train_common import parse_common_args, run_training
 
-VERSION_NUM = "101"
+VERSION_NUM = "103"
 
 TASK = dict(
     task_name="bookcontent",
@@ -18,7 +18,7 @@ TASK = dict(
     version_num=VERSION_NUM,  # 旧权重备份为 {旧名}_{ts}_backup.pt
     project="runs/bookcontent",  # 训练产物输出目录
     # ---- 从头训练配置（追求精度）----
-    epochs=80,
+    epochs=50,
     batch=12,
     patience=30,  # 从头训练收敛慢，加大耐心防误停
     lr0=0.001,  # 从头训练用正常学习率（0.0003 是微调用的，太小学不动）

@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-10-16T09:22:21+08:00",
+  "generated_at": "2026-10-18T16:22:08+08:00",
   "release": "database",
   "files": {
     "bookcontent": {
-      "name": "bookcontent-v100.pt",
-      "version": 100,
-      "sha256": "8a70a890c3132edc9da82f27e51113bf054dd82ab7fad2c7bb8d71dd66d2fa5d",
-      "size": 6245475,
-      "date": "2026-09-28T18:52:07+08:00"
+      "name": "bookcontent-v103.pt",
+      "version": 103,
+      "sha256": "3cf748b4a8f8303ce26a71d590d3a926374dc17ca6d8e4a08d796edff58bb331",
+      "size": 6228323,
+      "date": "2026-10-16T23:43:36+08:00"
     },
     "gujiline": {
       "name": "gujiline-v100.pt",
